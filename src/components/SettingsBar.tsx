@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import { Upload, Link as LinkIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, FlipHorizontal, Mic, MicOff } from 'lucide-react';
+import { Upload, Link as LinkIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, FlipHorizontal, Mic, MicOff, Trash2 } from 'lucide-react';
 
 interface SettingsBarProps {
     showSettings: boolean;
@@ -18,13 +18,14 @@ interface SettingsBarProps {
     onFileUpload: (e: ChangeEvent<HTMLInputElement>) => void;
     onOpenGDoc: () => void;
     onOpenPaste: () => void;
+    onClearMemory: () => void;
 }
 
 export function SettingsBar({
     showSettings, speed, setSpeed, fontSize, setFontSize,
     textAlign, setTextAlign, fontFamily, setFontFamily,
     isMirrored, setIsMirrored, voiceEnabled, onToggleVoice,
-    onFileUpload, onOpenGDoc, onOpenPaste,
+    onFileUpload, onOpenGDoc, onOpenPaste, onClearMemory,
 }: SettingsBarProps) {
     return (
         <div
@@ -89,6 +90,13 @@ export function SettingsBar({
             <button onClick={onToggleVoice} className={`flex items-center gap-2 px-3 py-2 rounded-lg transition active:scale-95 ${voiceEnabled ? 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'}`}>
                 {voiceEnabled ? <Mic size={18} /> : <MicOff size={18} />}
                 <span className="text-sm font-semibold tracking-wide hidden md:block">Voice</span>
+            </button>
+
+            <div className="w-px h-8 bg-zinc-700 mx-1 hidden md:block"></div>
+
+            <button onClick={onClearMemory} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-red-900/50 hover:text-red-400 text-zinc-300 transition active:scale-95" title="Clear saved text">
+                <Trash2 size={18} />
+                <span className="text-sm font-semibold tracking-wide hidden md:block">Clear</span>
             </button>
         </div>
     );

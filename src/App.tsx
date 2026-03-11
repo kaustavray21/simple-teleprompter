@@ -18,9 +18,11 @@ declare global {
   }
 }
 
+const DEFAULT_TEXT = 'Upload a PDF, Word, or TXT document to begin.\n\nTap the screen to hide or show the top settings bar.\n\nYou can control the scrolling speed, adjust text size, align paragraphs, format text, and enter full screen mode using the controls.';
+
 export default function App() {
   // --- STATE ---
-  const [text, setText] = useState('Upload a PDF, Word, or TXT document to begin.\n\nTap the screen to hide or show the top settings bar.\n\nYou can control the scrolling speed, adjust text size, align paragraphs, format text, and enter full screen mode using the controls.');
+  const [text, setText] = useState(DEFAULT_TEXT);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
   const [isMirrored, setIsMirrored] = useState(false);
@@ -106,6 +108,42 @@ export default function App() {
       if (document.head.contains(mammothScript)) document.head.removeChild(mammothScript);
     };
   }, []);
+
+  // --- LOCAL STORAGE PERSISTENCE ---
+  useEffect(() => {
+    const savedText = localStorage.getItem('teleprompter_saved_text');
+    const savedTimestamp = localStorage.getItem('teleprompter_saved_timestamp');
+
+    if (savedText && savedTimestamp) {
+      const parsedTime = parseInt(savedTimestamp, 10);
+      const isExpired = Date.now() - parsedTime > 24 * 60 * 60 * 1000; // 24 hours
+
+      if (isExpired) {
+        localStorage.removeItem('teleprompter_saved_text');
+        localStorage.removeItem('teleprompter_saved_timestamp');
+      } else {
+        setText(savedText);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (text === DEFAULT_TEXT) {
+      localStorage.removeItem('teleprompter_saved_text');
+      localStorage.removeItem('teleprompter_saved_timestamp');
+    } else {
+      localStorage.setItem('teleprompter_saved_text', text);
+      localStorage.setItem('teleprompter_saved_timestamp', Date.now().toString());
+    }
+  }, [text]);
+
+  const handleClearMemory = () => {
+    localStorage.removeItem('teleprompter_saved_text');
+    localStorage.removeItem('teleprompter_saved_timestamp');
+    setText(DEFAULT_TEXT);
+    setIsPlaying(false);
+    scrollYRef.current = 0;
+  };
 
   // --- SETTINGS VISIBILITY ---
   useEffect(() => {
@@ -226,6 +264,7 @@ export default function App() {
         onFileUpload={handleFileUpload}
         onOpenGDoc={openGDocModal}
         onOpenPaste={openPasteModal}
+        onClearMemory={handleClearMemory}
       />
 
       <TeleprompterViewport

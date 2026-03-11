@@ -25,26 +25,37 @@ It runs entirely in your browser, meaning there is **nothing to install** and yo
 - **🪞 Beamsplitter Glass Rigs:** Built-in one-click mirroring allows you to flip the text horizontally so it appears correct when reflected in professional teleprompter glass.
 - **🎤 Remote Presentations:** Keep your notes scrolling automatically while you present via Teams, Zoom, or Google Meet.
 
-## ⚙️ Features & Controls
+## 🎤 Voice Controls (New!)
+Control the prompter completely hands-free using the browser's native Web Speech API. Click the **Voice (Mic)** toggle to begin listening.
+
+* **Playback**: `"play"`, `"resume"`, `"start"`, `"pause"`, `"stop"`
+* **Speed**: `"faster"`, `"slower"`, `"speed 5"`, `"set speed to 3.5"`
+* **Navigation**: `"restart"`, `"jump to line 30"`, `"jump to 50 percent"`, `"jump to end"`
+* **Appearance**: `"bigger"`, `"smaller"`, `"size 80"`, `"align left"`, `"font monospace"`, `"mirror"`
+* **Disable**: `"mute"`, `"voice off"`
+
+## ⚙️ Interface & Settings
 
 The interface has been meticulously designed to stay out of your way. When the prompter is running, all controls automatically hide to provide a clean, distraction-free reading experience. 
 
-To reveal the settings, simply tap the screen, move your mouse, or click anywhere.
-
 ### 🎛️ Top Configurations
-- **📄 Load File:** Click the Upload icon to import a local script in `.docx` (Word) or `.pdf` format. 
-- **📋 Paste Text:** Directly paste text from your clipboard using the Paste icon.
+- **📄 Load File:** Import scripts as `.pdf`, `.docx` (Word), or `.txt` plain text files. 
 - **🔗 G-Doc Import:** Link directly to a public Google Doc. Perfect for collaborative script writing with your team! *(Note: The document must be set to "Anyone with the link can view").*
-- **⏩ Speed Control:** Fine-tune your scrolling speed with increments as precise as `0.1x`. Ranges from ultra-slow (`0.5x`) to extremely fast (`12.0x`).
-- **🔠 Font Size:** Adjust the text scale from `24px` to `140px` to match your reading distance.
+- **📋 Paste Text:** Directly paste your script text into the built-in modal.
+- **💾 Auto-Save Memory:** Uploaded scripts are automatically saved to your browser's local storage. You can safely refresh the page without losing your text! Scripts auto-expire after 24 hours to save space, or you can manually click the **Clear** button to reset.
+- **⏩ Speed Control:** Fine-tune your scrolling speed with increments as precise as `0.1x`.
+- **🔠 Font Size & Style:** Adjust the text scale from `24px` to `200px`. Choose between Sans-Serif, Serif, Monospace, Arial, and Georgia fonts.
+- **📏 Alignment:** Align paragraphs Left, Right, Center, or Justify.
 - **🔄 Mirror Toggle:** Reverses the text horizontally for use with physical teleprompter mirrors.
+- **🎙️ Voice Toggle:** Enables hands-free Speech Recognition commands.
+- **🗑️ Clear:** Manually flushes your saved script from local memory and resets the prompter.
 
 ### 🕹️ Bottom Playback Controls
 - **⏮️ Restart:** Instantly jumps back to the absolute top of your script.
 - **⏪ Rewind:** Jumps backwards by a few lines. Great if you stumble or need a quick retake.
 - **▶️ Play / ⏸️ Pause:** Toggles the auto-scroller. Clicking "Play" auto-hides the interface.
 - **⏩ Fast Forward:** Skips forward ahead in the script.
-- **🪟 Fullscreen:** Expands the app to fill your entire display. On mobile devices, this will also heavily attempt to lock the screen to landscape orientation for maximum horizontal reading space.
+- **🪟 Fullscreen:** Expands the app to fill your entire display. Locks the screen to landscape orientation on mobile devices.
 
 ## 🛠️ Getting Started Locally
 
