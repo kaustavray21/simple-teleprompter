@@ -76,24 +76,74 @@ export default function App() {
   const handleJumpTo = (progress: number) => {
     // progress is 0–1 representing fraction of total script height
     if (!textRef.current) return;
-    const totalHeight = textRef.current.scrollHeight;
+    // Subtract bottom padding (50vh) to get the actual text content height
+    const totalHeight = textRef.current.scrollHeight - (window.innerHeight / 2);
     const clamped = Math.min(1, Math.max(0, progress));
-    scrollYRef.current = totalHeight * clamped;
+    scrollYRef.current = Math.max(0, totalHeight * clamped);
     // Force an immediate visual update
-    if (!isPlaying && textRef.current) {
-      const startY = (window.innerHeight / 2) - scrollYRef.current;
-      textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-    }
+    const startY = (window.innerHeight / 2) - scrollYRef.current;
+    textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
+  };
+
+  const handleJumpToLine = (lineNum: number) => {
+    if (!textRef.current) return;
+    // Use visual line height (leading-relaxed = 1.625x fontSize)
+    const lineHeight = fontSize * 1.625;
+    // Count visual lines from actual rendered content height, not \n splits
+    const contentHeight = textRef.current.scrollHeight - (window.innerHeight / 2);
+    const totalVisualLines = Math.max(1, Math.round(contentHeight / lineHeight));
+    const clamped = Math.min(totalVisualLines, Math.max(1, lineNum));
+    scrollYRef.current = Math.max(0, (clamped - 1) * lineHeight);
+    const startY = (window.innerHeight / 2) - scrollYRef.current;
+    textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
+  };
+
+  const handleJumpToEnd = () => {
+    if (!textRef.current) return;
+    // Jump to the very end of the actual rendered content
+    const totalHeight = textRef.current.scrollHeight - (window.innerHeight / 2);
+    scrollYRef.current = Math.max(0, totalHeight);
+    const startY = (window.innerHeight / 2) - scrollYRef.current;
+    textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
   };
   // VOICE CONTROL — REUSABLE HANDLERS END
 
-  // VOICE CONTROL — COMMAND PARSER
-  const parseVoiceCommand = (transcript: string) => {
-    setLastCommand(transcript);
+  // VOICE CONTROL — NUMBER WORD HELPER
+  const wordToNumber = (str: string): string => {
+    const words: Record<string, string> = {
+      zero: '0', one: '1', two: '2', three: '3', four: '4', five: '5',
+      six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
+      eleven: '11', twelve: '12', thirteen: '13', fourteen: '14', fifteen: '15',
+      sixteen: '16', seventeen: '17', eighteen: '18', nineteen: '19', twenty: '20',
+      thirty: '30', forty: '40', fifty: '50', sixty: '60', seventy: '70',
+      eighty: '80', ninety: '90', hundred: '100',
+    };
+    let result = str;
+    for (const [word, digit] of Object.entries(words)) {
+      result = result.replace(new RegExp(`\\b${word}\\b`, 'gi'), digit);
+    }
+    return result;
+  };
 
-    // Play
-    if (transcript.includes('play') && !transcript.includes('pause')) {
-      handlePlay();
+  // VOICE CONTROL — COMMAND PARSER
+  const parseVoiceCommand = (rawTranscript: string) => {
+    setLastCommand(rawTranscript);
+    // Convert spoken number words to digits for reliable matching
+    const transcript = wordToNumber(rawTranscript);
+
+    // Mute: "mute" — disable voice control
+    if (transcript.includes('mute') || transcript.includes('mute voice') || transcript.includes('voice off')) {
+      setVoiceEnabled(false);
+      return;
+    }
+
+    // Restart: "restart" / "start over" / "beginning"
+    if (transcript.includes('restart') || transcript.includes('start over') || transcript.includes('beginning') || transcript.includes('reset')) {
+      scrollYRef.current = 0;
+      if (textRef.current) {
+        const startY = (window.innerHeight / 2) - scrollYRef.current;
+        textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
+      }
       return;
     }
 
@@ -103,7 +153,24 @@ export default function App() {
       return;
     }
 
-    // Set speed: "set speed to 3", "speed 5", "change speed to 2.5"
+    // Play / Resume / Start
+    if (transcript.includes('play') || transcript.includes('resume') || transcript.includes('start') || transcript.includes('go')) {
+      // Avoid triggering on jump/line/percent commands
+      if (!transcript.includes('percent') && !transcript.includes('%') && !transcript.includes('line') && !transcript.includes('end')) {
+        handlePlay();
+        return;
+      }
+    }
+
+    // Set speed: "set speed to 3", "speed 5", "change speed to 2.5", "faster", "slower"
+    if (transcript.includes('faster')) {
+      handleSetSpeed(speed + 1);
+      return;
+    }
+    if (transcript.includes('slower')) {
+      handleSetSpeed(speed - 1);
+      return;
+    }
     const speedMatch = transcript.match(/(?:set|change)?\s*speed\s*(?:to)?\s*(\d+(?:\.\d+)?)/i);
     if (speedMatch) {
       const parsed = parseFloat(speedMatch[1]);
@@ -111,8 +178,22 @@ export default function App() {
       return;
     }
 
-    // Jump to percent: "jump to 50 percent", "go to 80 percent", "50 percent"
-    const jumpMatch = transcript.match(/(?:jump|go)?\s*(?:to)?\s*(\d+)\s*percent/i);
+    // Jump to end: "jump to end", "go to end", "the end", "last line"
+    if (transcript.includes('end') || transcript.includes('last line') || transcript.includes('bottom')) {
+      handleJumpToEnd();
+      return;
+    }
+
+    // Jump to line: "jump to line 30", "line 30", "go to line 30"
+    const lineMatch = transcript.match(/(?:jump|go)?\s*(?:to)?\s*line\s*(?:number)?\s*(\d+)/i);
+    if (lineMatch) {
+      const lineNum = parseInt(lineMatch[1], 10);
+      if (!isNaN(lineNum)) handleJumpToLine(lineNum);
+      return;
+    }
+
+    // Jump to percent: "jump to 50 percent", "go to 80 percent", "50 percent", "50%"
+    const jumpMatch = transcript.match(/(\d+)\s*(?:percent|%)/i);
     if (jumpMatch) {
       const pct = parseInt(jumpMatch[1], 10);
       if (!isNaN(pct)) handleJumpTo(Math.min(100, Math.max(0, pct)) / 100);
