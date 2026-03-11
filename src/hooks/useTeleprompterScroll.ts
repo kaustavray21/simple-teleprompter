@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import type { MouseEvent } from 'react';
 
 interface UseTeleprompterScrollOptions {
@@ -25,60 +25,60 @@ export function useTeleprompterScroll({
     const requestRef = useRef<number | null>(null);
     const scrollYRef = useRef(0);
 
-    // Frame loop
-    const updateScroll = () => {
+    // Store latest values in refs so the rAF callback never goes stale
+    const isPlayingRef = useRef(isPlaying);
+    const speedRef = useRef(speed);
+    const isMirroredRef = useRef(isMirrored);
+
+    useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+    useEffect(() => { speedRef.current = speed; }, [speed]);
+    useEffect(() => { isMirroredRef.current = isMirrored; }, [isMirrored]);
+
+    const applyTransform = useCallback(() => {
         if (!textRef.current) return;
-
-        if (isPlaying) {
-            scrollYRef.current += speed;
-        }
-
         const startY = (window.innerHeight / 2) - scrollYRef.current;
-        textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
+        textRef.current.style.transform = `translateY(${startY}px) ${isMirroredRef.current ? 'scaleX(-1)' : 'scaleX(1)'}`;
+    }, []);
 
-        requestRef.current = requestAnimationFrame(updateScroll);
-    };
-
+    // Single rAF loop — never torn down and recreated
     useEffect(() => {
-        requestRef.current = requestAnimationFrame(updateScroll);
+        const tick = () => {
+            if (isPlayingRef.current) {
+                scrollYRef.current += speedRef.current;
+            }
+            applyTransform();
+            requestRef.current = requestAnimationFrame(tick);
+        };
+
+        requestRef.current = requestAnimationFrame(tick);
         return () => {
             if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
         };
-    }, [isPlaying, speed, isMirrored]);
+    }, [applyTransform]);
 
-    // Recalculate immediate offset on static changes
+    // Recalculate immediate offset on static property changes
     useEffect(() => {
-        if (!isPlaying && textRef.current) {
-            const startY = (window.innerHeight / 2) - scrollYRef.current;
-            textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
+        if (!isPlayingRef.current) {
+            applyTransform();
         }
-    }, [isMirrored, text, fontSize, fontFamily, textAlign]);
+    }, [isMirrored, text, fontSize, fontFamily, textAlign, applyTransform]);
 
-    const resetScroll = () => {
+    const resetScroll = useCallback(() => {
         scrollYRef.current = 0;
-        if (!isPlaying && textRef.current) {
-            const startY = (window.innerHeight / 2) - scrollYRef.current;
-            textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-        }
-    };
+        if (!isPlayingRef.current) applyTransform();
+    }, [applyTransform]);
 
-    const skipBackward = (e: MouseEvent<HTMLButtonElement>) => {
+    const skipBackward = useCallback((e: MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         scrollYRef.current = Math.max(0, scrollYRef.current - (fontSize * 5));
-        if (!isPlaying && textRef.current) {
-            const startY = (window.innerHeight / 2) - scrollYRef.current;
-            textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-        }
-    };
+        if (!isPlayingRef.current) applyTransform();
+    }, [fontSize, applyTransform]);
 
-    const skipForward = (e: MouseEvent<HTMLButtonElement>) => {
+    const skipForward = useCallback((e: MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         scrollYRef.current += (fontSize * 5);
-        if (!isPlaying && textRef.current) {
-            const startY = (window.innerHeight / 2) - scrollYRef.current;
-            textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-        }
-    };
+        if (!isPlayingRef.current) applyTransform();
+    }, [fontSize, applyTransform]);
 
     return {
         textRef,

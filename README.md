@@ -39,17 +39,18 @@ Control the prompter completely hands-free using the browser's native Web Speech
 The interface has been meticulously designed to stay out of your way. When the prompter is running, all controls automatically hide to provide a clean, distraction-free reading experience. 
 
 ### 🎛️ Top Configurations
-- **📄 Load File:** Import scripts as `.pdf`, `.docx` (Word), or `.txt` plain text files. 
+- **📄 Load File:** Import scripts as `.pdf`, `.docx` (Word), or `.txt` plain text files.
 - **🔗 G-Doc Import:** Link directly to a public Google Doc. Perfect for collaborative script writing with your team! *(Note: The document must be set to "Anyone with the link can view").*
 - **📋 Paste Text:** Directly paste your script text into the built-in modal.
-- **💾 Auto-Save Memory:** Uploaded scripts are automatically saved to your browser's local storage. You can safely refresh the page without losing your text! Scripts auto-expire after 24 hours to save space, or you can manually click the **Clear** button to reset.
-- **📶 Offline Mode:** Built as a Progressive Web App (PWA). You can install the teleprompter directly to your device and use it entirely offline without an internet connection! 
+- **💾 Auto-Save Memory:** The active script is automatically saved to your browser's local storage. You can safely refresh the page without losing your text! Active scripts auto-expire after 24 hours.
+- **📚 Script Library:** Save multiple scripts for future use! Store them permanently or as 24-hour Temporary Sessions. Browse, load, or delete them via the "Library" menu.
+- **📶 Offline Mode:** Built as a Progressive Web App (PWA). You can install the teleprompter directly to your device and use it offline! There is also a built-in guide for offline Voice Dictation setup.
 - **⏩ Speed Control:** Fine-tune your scrolling speed with increments as precise as `0.1x`.
 - **🔠 Font Size & Style:** Adjust the text scale from `24px` to `200px`. Choose between Sans-Serif, Serif, Monospace, Arial, and Georgia fonts.
 - **📏 Alignment:** Align paragraphs Left, Right, Center, or Justify.
 - **🔄 Mirror Toggle:** Reverses the text horizontally for use with physical teleprompter mirrors.
 - **🎙️ Voice Toggle:** Enables hands-free Speech Recognition commands.
-- **🗑️ Clear:** Manually flushes your saved script from local memory and resets the prompter.
+- **🗑️ Clear (Dustbin Icon):** Manually flushes your current script from memory and resets the prompter.
 
 ### 🕹️ Bottom Playback Controls
 - **⏮️ Restart:** Instantly jumps back to the absolute top of your script.

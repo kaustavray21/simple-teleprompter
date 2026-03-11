@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import { Upload, Link as LinkIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, FlipHorizontal, Mic, MicOff, Trash2, CircleHelp } from 'lucide-react';
+import { Upload, Link as LinkIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, FlipHorizontal, Mic, MicOff, Library, CircleHelp, Trash2, Save } from 'lucide-react';
 
 interface SettingsBarProps {
     showSettings: boolean;
@@ -18,15 +18,18 @@ interface SettingsBarProps {
     onFileUpload: (e: ChangeEvent<HTMLInputElement>) => void;
     onOpenGDoc: () => void;
     onOpenPaste: () => void;
-    onClearMemory: () => void;
+    onOpenLibrary: () => void;
     onOpenVoiceHelp: () => void;
+    onClearMemory: () => void;
+    onOpenSavePrompt: () => void;
 }
 
 export function SettingsBar({
     showSettings, speed, setSpeed, fontSize, setFontSize,
     textAlign, setTextAlign, fontFamily, setFontFamily,
     isMirrored, setIsMirrored, voiceEnabled, onToggleVoice,
-    onFileUpload, onOpenGDoc, onOpenPaste, onClearMemory, onOpenVoiceHelp
+    onFileUpload, onOpenGDoc, onOpenPaste, onOpenLibrary, onOpenVoiceHelp,
+    onClearMemory, onOpenSavePrompt
 }: SettingsBarProps) {
     return (
         <div
@@ -114,9 +117,20 @@ export function SettingsBar({
 
                 <div className="w-px h-6 bg-zinc-700 mx-1 hidden sm:block"></div>
 
-                <button onClick={onClearMemory} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-red-900/50 hover:text-red-400 text-zinc-300 transition active:scale-95" title="Clear saved text">
+                <button onClick={onOpenLibrary} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-blue-900/50 hover:text-blue-400 text-zinc-300 transition active:scale-95" title="Script Library">
+                    <Library size={16} />
+                    <span className="text-sm font-semibold tracking-wide hidden sm:block">Library</span>
+                </button>
+
+                <div className="w-px h-6 bg-zinc-700 mx-1 hidden sm:block"></div>
+
+                <button onClick={onClearMemory} className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-zinc-700/50 rounded-md transition" title="Clear Memory & Reset Text">
                     <Trash2 size={16} />
-                    <span className="text-sm font-semibold tracking-wide hidden sm:block">Clear</span>
+                </button>
+
+                <button onClick={onOpenSavePrompt} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-400 transition active:scale-95" title="Save Script">
+                    <Save size={16} />
+                    <span className="text-sm font-semibold tracking-wide hidden sm:block">Save</span>
                 </button>
             </div>
         </div>

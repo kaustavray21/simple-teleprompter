@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ChangeEvent, MouseEvent } from 'react';
 
 import { useTeleprompterScroll } from './hooks/useTeleprompterScroll';
@@ -7,7 +7,12 @@ import { SettingsBar } from './components/SettingsBar';
 import { PlaybackControls } from './components/PlaybackControls';
 import { VoiceStatusPill } from './components/VoiceStatusPill';
 import { InputModal } from './components/InputModal';
+import type { ModalConfig } from './components/InputModal';
 import { TeleprompterViewport } from './components/TeleprompterViewport';
+import { ScriptLibraryModal } from './components/ScriptLibraryModal';
+import { useScriptStorage } from './hooks/useScriptStorage';
+import type { SavedScript } from './hooks/useScriptStorage';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 import * as mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -23,10 +28,22 @@ declare global {
 }
 
 const DEFAULT_TEXT = 'Upload a PDF, Word, or TXT document to begin.\n\nTap the screen to hide or show the top settings bar.\n\nYou can control the scrolling speed, adjust text size, align paragraphs, format text, and enter full screen mode using the controls.';
+const TEXT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CLOSED_MODAL: ModalConfig = { isOpen: false };
+
+// CORS proxy list — if the primary fails, try the fallback
+const CORS_PROXIES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+];
 
 export default function App() {
   // --- STATE ---
-  const [text, setText] = useState(DEFAULT_TEXT);
+  const [text, setText, removeText] = useLocalStorage<string>(
+    'teleprompter_saved_text',
+    DEFAULT_TEXT,
+    { ttl: TEXT_TTL_MS }
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
   const [isMirrored, setIsMirrored] = useState(false);
@@ -34,25 +51,27 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(true);
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right' | 'justify'>('center');
   const [fontFamily, setFontFamily] = useState('sans-serif');
-  const [modalConfig, setModalConfig] = useState({ isOpen: false, type: '', message: '', inputValue: '' });
+  const [modalConfig, setModalConfig] = useState<ModalConfig>(CLOSED_MODAL);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- HOOKS ---
+  const { scripts, saveScript, deleteScript } = useScriptStorage();
   const { textRef, containerRef, scrollYRef, resetScroll, skipBackward, skipForward } = useTeleprompterScroll({
     isPlaying, speed, isMirrored, fontSize, text, fontFamily, textAlign,
   });
 
-  // Voice control jump handlers need textRef and scrollYRef
-  const handleJumpTo = (progress: number) => {
+  // --- VOICE CONTROL JUMP HANDLERS (useCallback for stable refs) ---
+  const handleJumpTo = useCallback((progress: number) => {
     if (!textRef.current) return;
     const totalHeight = textRef.current.scrollHeight - (window.innerHeight / 2);
     const clamped = Math.min(1, Math.max(0, progress));
     scrollYRef.current = Math.max(0, totalHeight * clamped);
     const startY = (window.innerHeight / 2) - scrollYRef.current;
     textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-  };
+  }, [textRef, scrollYRef, isMirrored]);
 
-  const handleJumpToLine = (lineNum: number) => {
+  const handleJumpToLine = useCallback((lineNum: number) => {
     if (!textRef.current) return;
     const lineHeight = fontSize * 1.625;
     const contentHeight = textRef.current.scrollHeight - (window.innerHeight / 2);
@@ -61,23 +80,23 @@ export default function App() {
     scrollYRef.current = Math.max(0, (clamped - 1) * lineHeight);
     const startY = (window.innerHeight / 2) - scrollYRef.current;
     textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-  };
+  }, [textRef, scrollYRef, fontSize, isMirrored]);
 
-  const handleJumpToEnd = () => {
+  const handleJumpToEnd = useCallback(() => {
     if (!textRef.current) return;
     const totalHeight = textRef.current.scrollHeight - (window.innerHeight / 2);
     scrollYRef.current = Math.max(0, totalHeight);
     const startY = (window.innerHeight / 2) - scrollYRef.current;
     textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
-  };
+  }, [textRef, scrollYRef, isMirrored]);
 
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
     scrollYRef.current = 0;
     if (textRef.current) {
       const startY = (window.innerHeight / 2);
       textRef.current.style.transform = `translateY(${startY}px) ${isMirrored ? 'scaleX(-1)' : 'scaleX(1)'}`;
     }
-  };
+  }, [textRef, scrollYRef, isMirrored]);
 
   const { voiceEnabled, setVoiceEnabled, lastCommand, voiceError } = useVoiceControl({
     onPlay: () => setIsPlaying(true),
@@ -94,41 +113,20 @@ export default function App() {
     speed,
   });
 
-  // --- LOCAL STORAGE PERSISTENCE ---
-  useEffect(() => {
-    const savedText = localStorage.getItem('teleprompter_saved_text');
-    const savedTimestamp = localStorage.getItem('teleprompter_saved_timestamp');
-
-    if (savedText && savedTimestamp) {
-      const parsedTime = parseInt(savedTimestamp, 10);
-      const isExpired = Date.now() - parsedTime > 24 * 60 * 60 * 1000; // 24 hours
-
-      if (isExpired) {
-        localStorage.removeItem('teleprompter_saved_text');
-        localStorage.removeItem('teleprompter_saved_timestamp');
-      } else {
-        setText(savedText);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (text === DEFAULT_TEXT) {
-      localStorage.removeItem('teleprompter_saved_text');
-      localStorage.removeItem('teleprompter_saved_timestamp');
-    } else {
-      localStorage.setItem('teleprompter_saved_text', text);
-      localStorage.setItem('teleprompter_saved_timestamp', Date.now().toString());
-    }
-  }, [text]);
-
-  const handleClearMemory = () => {
-    localStorage.removeItem('teleprompter_saved_text');
-    localStorage.removeItem('teleprompter_saved_timestamp');
-    setText(DEFAULT_TEXT);
+  // --- CLEAR MEMORY ---
+  const handleClearMemory = useCallback(() => {
+    removeText();
     setIsPlaying(false);
     scrollYRef.current = 0;
-  };
+  }, [removeText, scrollYRef]);
+
+  // --- LOAD SCRIPT FROM LIBRARY ---
+  const handleLoadScript = useCallback((script: SavedScript) => {
+    setText(script.text);
+    setIsLibraryOpen(false);
+    setIsPlaying(false);
+    scrollYRef.current = 0;
+  }, [setText, scrollYRef]);
 
   // --- SETTINGS VISIBILITY ---
   useEffect(() => {
@@ -140,98 +138,137 @@ export default function App() {
     }
   }, [isPlaying]);
 
-  const handleUserInteraction = () => {
+  const handleUserInteraction = useCallback(() => {
     setShowSettings(true);
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     if (isPlaying) {
       hideTimerRef.current = setTimeout(() => setShowSettings(false), 2500);
     }
-  };
+  }, [isPlaying]);
 
-  // --- FILE / DOC HANDLERS ---
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+  // --- FILE / DOC HANDLERS (with error handling) ---
+  const handleFileUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsPlaying(false);
     scrollYRef.current = 0;
 
-    if (file.name.endsWith('.docx')) {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      setText(result.value);
-    } else if (file.name.endsWith('.pdf')) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        fullText += content.items.map((item: any) => item.str).join(' ') + '\n\n';
+    try {
+      if (file.name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        setText(result.value);
+      } else if (file.name.endsWith('.pdf')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          fullText += content.items
+            .filter((item): item is { str: string } & typeof item => 'str' in item)
+            .map(item => item.str)
+            .join(' ') + '\n\n';
+        }
+        setText(fullText);
+      } else if (file.name.endsWith('.txt')) {
+        const textContent = await file.text();
+        setText(textContent);
       }
-      setText(fullText);
-    } else if (file.name.endsWith('.txt')) {
-      const textNode = await file.text();
-      setText(textNode);
+    } catch (error) {
+      console.error('Failed to parse file:', error);
+      setModalConfig({
+        isOpen: true, type: 'error',
+        message: `Failed to load "${file.name}". The file may be corrupted or in an unsupported format.`,
+        inputValue: ''
+      });
     }
-  };
+  }, [setText, scrollYRef]);
 
-  const openGDocModal = () => {
+  const openGDocModal = useCallback(() => {
     setModalConfig({ isOpen: true, type: 'input', message: "Paste a PUBLIC Google Docs link:\n(Must be set to 'Anyone with the link can view')", inputValue: '' });
-  };
+  }, []);
 
-  const openPasteModal = () => {
+  const openPasteModal = useCallback(() => {
     setModalConfig({ isOpen: true, type: 'paste', message: "Paste your script text below:", inputValue: '' });
-  };
+  }, []);
 
-  const openVoiceHelpModal = () => {
+  const openVoiceHelpModal = useCallback(() => {
     setModalConfig({ isOpen: true, type: 'offline-voice-help', message: "🎙️ Offline Voice Setup", inputValue: '' });
-  };
+  }, []);
 
-  const handlePasteSubmit = () => {
-    if (modalConfig.inputValue.trim()) {
+  const handlePasteSubmit = useCallback(() => {
+    if (modalConfig.isOpen && modalConfig.inputValue.trim()) {
       setText(modalConfig.inputValue);
       setIsPlaying(false);
       scrollYRef.current = 0;
     }
-    setModalConfig({ ...modalConfig, isOpen: false, inputValue: '' });
-  };
+    setModalConfig(CLOSED_MODAL);
+  }, [modalConfig, setText, scrollYRef]);
 
-  const handleGDocSubmit = async (url: string) => {
-    if (!url) { setModalConfig({ ...modalConfig, isOpen: false }); return; }
+  const handleGDocSubmit = useCallback(async (url: string) => {
+    if (!url) { setModalConfig(CLOSED_MODAL); return; }
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (!match) { setModalConfig({ isOpen: true, type: 'error', message: "Invalid Google Docs link.", inputValue: '' }); return; }
+    if (!match) {
+      setModalConfig({ isOpen: true, type: 'error', message: "Invalid Google Docs link.", inputValue: '' });
+      return;
+    }
 
     const docId = match[1];
     const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(exportUrl)}`;
     setModalConfig({ isOpen: true, type: 'error', message: "Loading document...", inputValue: '' });
 
-    try {
-      const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error("Network response was not ok");
-      const fetchedText = await response.text();
-      if (fetchedText.trim().startsWith('<')) {
-        setModalConfig({ isOpen: true, type: 'error', message: "Could not load document. Please ensure the Google Doc sharing settings are set to 'Anyone with the link can view'.", inputValue: '' });
+    // Try each CORS proxy in order
+    for (const makeProxyUrl of CORS_PROXIES) {
+      try {
+        const response = await fetch(makeProxyUrl(exportUrl));
+        if (!response.ok) continue;
+        const fetchedText = await response.text();
+        if (fetchedText.trim().startsWith('<')) continue; // HTML error page, try next
+        setText(fetchedText);
+        setIsPlaying(false);
+        scrollYRef.current = 0;
+        setModalConfig(CLOSED_MODAL);
         return;
+      } catch {
+        // Try next proxy
       }
-      setText(fetchedText);
-      setIsPlaying(false);
-      scrollYRef.current = 0;
-      setModalConfig({ isOpen: false, type: '', message: '', inputValue: '' });
-    } catch {
-      setModalConfig({ isOpen: true, type: 'error', message: "Failed to fetch the document. It might not be public or the proxy failed.", inputValue: '' });
     }
-  };
 
-  const toggleFullscreen = async () => {
+    // All proxies failed
+    setModalConfig({
+      isOpen: true, type: 'error',
+      message: "Failed to fetch the document. It might not be public, or CORS proxies are unavailable. Try pasting the text directly instead.",
+      inputValue: ''
+    });
+  }, [setText, scrollYRef]);
+
+  const toggleFullscreen = useCallback(async () => {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
-      try { await (screen.orientation as any).lock('landscape'); } catch { }
+      try {
+        const orientation = screen.orientation as ScreenOrientation & { lock?: (type: string) => Promise<void> };
+        if (orientation.lock) {
+          await orientation.lock('landscape');
+        }
+      } catch { /* orientation lock not supported on this device */ }
     } else {
       await document.exitFullscreen();
-      try { (screen.orientation as any).unlock(); } catch { }
+      try {
+        const orientation = screen.orientation as ScreenOrientation & { unlock?: () => void };
+        if (orientation.unlock) {
+          orientation.unlock();
+        }
+      } catch { /* ignore */ }
     }
-  };
+  }, []);
+
+  const handleSavePromptSubmit = useCallback((name: string, isTemporary: boolean) => {
+    if (name.trim()) {
+      saveScript(name.trim(), text, isTemporary);
+      setModalConfig(CLOSED_MODAL);
+    }
+  }, [saveScript, text]);
 
   // --- RENDER ---
   return (
@@ -253,8 +290,10 @@ export default function App() {
         onFileUpload={handleFileUpload}
         onOpenGDoc={openGDocModal}
         onOpenPaste={openPasteModal}
-        onClearMemory={handleClearMemory}
+        onOpenLibrary={() => setIsLibraryOpen(true)}
         onOpenVoiceHelp={openVoiceHelpModal}
+        onClearMemory={handleClearMemory}
+        onOpenSavePrompt={() => setModalConfig({ isOpen: true, type: 'save-prompt', message: "Save Script to Library", inputValue: '' })}
       />
 
       <TeleprompterViewport
@@ -287,6 +326,15 @@ export default function App() {
         setModalConfig={setModalConfig}
         onGDocSubmit={handleGDocSubmit}
         onPasteSubmit={handlePasteSubmit}
+        onSavePromptSubmit={handleSavePromptSubmit}
+      />
+
+      <ScriptLibraryModal
+        isOpen={isLibraryOpen}
+        onClose={() => setIsLibraryOpen(false)}
+        scripts={scripts}
+        onLoadScript={handleLoadScript}
+        onDeleteScript={deleteScript}
       />
     </div>
   );

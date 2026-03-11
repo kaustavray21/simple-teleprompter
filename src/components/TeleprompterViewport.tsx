@@ -9,7 +9,7 @@ interface TeleprompterViewportProps {
     fontFamily: string;
 }
 
-export function TeleprompterViewport({ containerRef, textRef, text, fontSize, textAlign }: TeleprompterViewportProps) {
+export function TeleprompterViewport({ containerRef, textRef, text, fontSize, textAlign, fontFamily }: TeleprompterViewportProps) {
     return (
         <div ref={containerRef} className="flex-1 relative w-full h-full cursor-pointer overflow-hidden z-10">
             <div
@@ -18,6 +18,7 @@ export function TeleprompterViewport({ containerRef, textRef, text, fontSize, te
                 style={{
                     fontSize: `${fontSize}px`,
                     textAlign: textAlign,
+                    fontFamily: fontFamily,
                     fontWeight: 'bold',
                     willChange: 'transform'
                 }}
