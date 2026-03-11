@@ -9,10 +9,14 @@ import { VoiceStatusPill } from './components/VoiceStatusPill';
 import { InputModal } from './components/InputModal';
 import { TeleprompterViewport } from './components/TeleprompterViewport';
 
+import * as mammoth from 'mammoth';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+
 declare global {
   interface Window {
-    pdfjsLib: any;
-    mammoth: any;
     SpeechRecognition: typeof SpeechRecognition;
     webkitSpeechRecognition: typeof SpeechRecognition;
   }
@@ -90,25 +94,6 @@ export default function App() {
     speed,
   });
 
-  // --- SCRIPT LOADING ---
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
-    document.head.appendChild(script);
-    script.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-    };
-
-    const mammothScript = document.createElement('script');
-    mammothScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-    document.head.appendChild(mammothScript);
-
-    return () => {
-      if (document.head.contains(script)) document.head.removeChild(script);
-      if (document.head.contains(mammothScript)) document.head.removeChild(mammothScript);
-    };
-  }, []);
-
   // --- LOCAL STORAGE PERSISTENCE ---
   useEffect(() => {
     const savedText = localStorage.getItem('teleprompter_saved_text');
@@ -172,11 +157,11 @@ export default function App() {
 
     if (file.name.endsWith('.docx')) {
       const arrayBuffer = await file.arrayBuffer();
-      const result = await window.mammoth.extractRawText({ arrayBuffer });
+      const result = await mammoth.extractRawText({ arrayBuffer });
       setText(result.value);
     } else if (file.name.endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
