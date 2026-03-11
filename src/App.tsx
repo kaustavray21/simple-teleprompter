@@ -157,7 +157,7 @@ export default function App() {
       scrollYRef.current += speed;
     }
     requestRef.current = requestAnimationFrame(draw);
-  }, [dimensions, lines, isPlaying, speed, isMirrored, fontSize]);
+  }, [dimensions, lines, isPlaying, speed, isMirrored, fontSize, textAlign]);
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(draw);
