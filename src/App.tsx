@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ChangeEvent, MouseEvent } from 'react';
-import { Play, Pause, Maximize, RotateCcw, FlipHorizontal, Upload, Link as LinkIcon, Rewind, FastForward, FileText } from 'lucide-react';
+import { Play, Pause, Maximize, RotateCcw, FlipHorizontal, Upload, Link as LinkIcon, Rewind, FastForward, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -16,6 +16,7 @@ export default function App() {
   const [isMirrored, setIsMirrored] = useState(false);
   const [fontSize, setFontSize] = useState(48);
   const [showSettings, setShowSettings] = useState(true);
+  const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right' | 'justify'>('center');
   const [lines, setLines] = useState<string[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -114,15 +115,38 @@ export default function App() {
 
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const lineHeight = fontSize * 1.5;
     let startY = (dimensions.height / 2) - scrollYRef.current;
+    const maxWidth = dimensions.width * 0.85;
 
     lines.forEach((line) => {
       if (startY > -lineHeight && startY < dimensions.height + lineHeight) {
-        ctx.fillText(line, dimensions.width / 2, startY);
+        if (textAlign === 'center') {
+          ctx.textAlign = 'center';
+          ctx.fillText(line, dimensions.width / 2, startY);
+        } else if (textAlign === 'left') {
+          ctx.textAlign = 'left';
+          ctx.fillText(line, (dimensions.width - maxWidth) / 2, startY);
+        } else if (textAlign === 'right') {
+          ctx.textAlign = 'right';
+          ctx.fillText(line, dimensions.width - ((dimensions.width - maxWidth) / 2), startY);
+        } else if (textAlign === 'justify') {
+          ctx.textAlign = 'left';
+          const words = line.split(' ');
+          if (words.length <= 1 || line === '') {
+            ctx.fillText(line, (dimensions.width - maxWidth) / 2, startY);
+          } else {
+            const totalTextWidth = ctx.measureText(line.replace(/\s/g, '')).width;
+            const spaceWidth = (maxWidth - totalTextWidth) / (words.length - 1);
+            let currentX = (dimensions.width - maxWidth) / 2;
+            words.forEach((word) => {
+              ctx.fillText(word, currentX, startY);
+              currentX += ctx.measureText(word).width + spaceWidth;
+            });
+          }
+        }
       }
       startY += lineHeight;
     });
@@ -325,6 +349,21 @@ export default function App() {
           <span className="text-sm font-semibold tracking-wide text-zinc-300 w-10">Size</span>
           <input type="range" min="24" max="140" step="4" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="w-24 accent-blue-500 cursor-pointer" />
           <span className="text-xs font-mono text-blue-400 w-6 text-right">{fontSize}</span>
+        </div>
+
+        <div className="flex items-center bg-zinc-800 p-1 rounded-lg">
+          <button onClick={() => setTextAlign('left')} className={`p-1.5 rounded-md transition ${textAlign === 'left' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`} title="Align Left">
+            <AlignLeft size={18} />
+          </button>
+          <button onClick={() => setTextAlign('center')} className={`p-1.5 rounded-md transition ${textAlign === 'center' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`} title="Align Center">
+            <AlignCenter size={18} />
+          </button>
+          <button onClick={() => setTextAlign('right')} className={`p-1.5 rounded-md transition ${textAlign === 'right' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`} title="Align Right">
+            <AlignRight size={18} />
+          </button>
+          <button onClick={() => setTextAlign('justify')} className={`p-1.5 rounded-md transition ${textAlign === 'justify' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`} title="Justify">
+            <AlignJustify size={18} />
+          </button>
         </div>
 
         <button onClick={() => setIsMirrored(!isMirrored)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition active:scale-95 ${isMirrored ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'}`}>
