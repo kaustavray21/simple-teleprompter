@@ -1,0 +1,1 @@
+{"name":"Simple Teleprompter","short_name":"Teleprompter","description":"A clean, web-based teleprompter application.","start_url":"/simple-teleprompter/","display":"standalone","background_color":"#000000","theme_color":"#000000","lang":"en","scope":"/simple-teleprompter/","icons":[{"src":"screen.svg","sizes":"any","type":"image/svg+xml"}]}
