@@ -26,7 +26,8 @@ export function InputModal({ modalConfig, setModalConfig, onGDocSubmit, onPasteS
                         <ul className="list-disc pl-5 flex flex-col gap-2 bg-zinc-800 p-4 rounded text-zinc-200">
                             <li><strong>Mac / iOS:</strong> Go to Settings → Keyboard → Dictation and download "On-device dictation" for your language.</li>
                             <li><strong>Windows:</strong> Go to Settings → Time & Language → Speech and install the offline Speech Packages.</li>
-                            <li><strong>Android:</strong> In your Google Keyboard / Voice Typing settings, download the Offline English pack.</li>
+                            <li><strong>Android (Google):</strong> In your Google Keyboard / Voice Typing settings, download the Offline English pack.</li>
+                            <li><strong>Android (Samsung):</strong> Go to Settings → General Management → Samsung Keyboard settings → Voice input. Ensure it's set to "Samsung voice input" and download the offline language pack.</li>
                         </ul>
                         <div className="flex justify-end gap-3 mt-2">
                             <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded transition">Got it</button>
