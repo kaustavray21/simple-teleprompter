@@ -43,6 +43,7 @@ The interface has been meticulously designed to stay out of your way. When the p
 - **🔗 G-Doc Import:** Link directly to a public Google Doc. Perfect for collaborative script writing with your team! *(Note: The document must be set to "Anyone with the link can view").*
 - **📋 Paste Text:** Directly paste your script text into the built-in modal.
 - **💾 Auto-Save Memory:** Uploaded scripts are automatically saved to your browser's local storage. You can safely refresh the page without losing your text! Scripts auto-expire after 24 hours to save space, or you can manually click the **Clear** button to reset.
+- **📶 Offline Mode:** Built as a Progressive Web App (PWA). You can install the teleprompter directly to your device and use it entirely offline without an internet connection! 
 - **⏩ Speed Control:** Fine-tune your scrolling speed with increments as precise as `0.1x`.
 - **🔠 Font Size & Style:** Adjust the text scale from `24px` to `200px`. Choose between Sans-Serif, Serif, Monospace, Arial, and Georgia fonts.
 - **📏 Alignment:** Align paragraphs Left, Right, Center, or Justify.
