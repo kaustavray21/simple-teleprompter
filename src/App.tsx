@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ChangeEvent, MouseEvent } from 'react';
-import { Play, Pause, Maximize, RotateCcw, FlipHorizontal, Upload, Link as LinkIcon, Rewind, FastForward } from 'lucide-react';
+import { Play, Pause, Maximize, RotateCcw, FlipHorizontal, Upload, Link as LinkIcon, Rewind, FastForward, FileText } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -194,6 +194,24 @@ export default function App() {
     });
   };
 
+  const openPasteModal = () => {
+    setModalConfig({
+      isOpen: true,
+      type: 'paste',
+      message: "Paste your script text below:",
+      inputValue: ''
+    });
+  };
+
+  const handlePasteSubmit = () => {
+    if (modalConfig.inputValue.trim()) {
+      setText(modalConfig.inputValue);
+      setIsPlaying(false);
+      scrollYRef.current = 0;
+    }
+    setModalConfig({ ...modalConfig, isOpen: false, inputValue: '' });
+  };
+
   const handleGDocSubmit = async (url: string) => {
     if (!url) {
       setModalConfig({ ...modalConfig, isOpen: false });
@@ -292,6 +310,11 @@ export default function App() {
           <span className="text-sm font-semibold tracking-wide">G-Doc</span>
         </button>
 
+        <button onClick={openPasteModal} className="flex items-center gap-2 bg-zinc-800 px-4 py-2 rounded-lg hover:bg-zinc-700 transition active:scale-95 text-zinc-300">
+          <FileText size={20} className="text-yellow-400" />
+          <span className="text-sm font-semibold tracking-wide">Paste</span>
+        </button>
+
         <div className="flex items-center gap-3 bg-zinc-800 px-4 py-2 rounded-lg">
           <span className="text-sm font-semibold tracking-wide text-zinc-300 w-12">Speed</span>
           <input type="range" min="0.5" max="12" step="0.1" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-24 accent-blue-500 cursor-pointer" />
@@ -351,6 +374,20 @@ export default function App() {
                 <div className="flex justify-end gap-3 mt-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 rounded hover:bg-zinc-800 text-zinc-300 transition">Cancel</button>
                   <button onClick={() => handleGDocSubmit(modalConfig.inputValue)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded transition">Load</button>
+                </div>
+              </div>
+            ) : modalConfig.type === 'paste' ? (
+              <div className="flex flex-col gap-4">
+                <textarea
+                  autoFocus
+                  className="w-full h-48 bg-zinc-800 border border-zinc-600 rounded p-2 text-white focus:outline-none focus:border-blue-500 resize-y"
+                  placeholder="Paste your text here..."
+                  value={modalConfig.inputValue}
+                  onChange={e => setModalConfig({ ...modalConfig, inputValue: e.target.value })}
+                />
+                <div className="flex justify-end gap-3 mt-2">
+                  <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 rounded hover:bg-zinc-800 text-zinc-300 transition">Cancel</button>
+                  <button onClick={handlePasteSubmit} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded transition">Load Text</button>
                 </div>
               </div>
             ) : (

@@ -33,6 +33,7 @@ To reveal the settings, simply tap the screen, move your mouse, or click anywher
 
 ### 🎛️ Top Configurations
 - **📄 Load File:** Click the Upload icon to import a local script in `.docx` (Word) or `.pdf` format. 
+- **📋 Paste Text:** Directly paste text from your clipboard using the Paste icon.
 - **🔗 G-Doc Import:** Link directly to a public Google Doc. Perfect for collaborative script writing with your team! *(Note: The document must be set to "Anyone with the link can view").*
 - **⏩ Speed Control:** Fine-tune your scrolling speed with increments as precise as `0.1x`. Ranges from ultra-slow (`0.5x`) to extremely fast (`12.0x`).
 - **🔠 Font Size:** Adjust the text scale from `24px` to `140px` to match your reading distance.
