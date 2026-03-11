@@ -294,8 +294,8 @@ export default function App() {
 
         <div className="flex items-center gap-3 bg-zinc-800 px-4 py-2 rounded-lg">
           <span className="text-sm font-semibold tracking-wide text-zinc-300 w-12">Speed</span>
-          <input type="range" min="0.5" max="12" step="0.5" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-24 accent-blue-500 cursor-pointer" />
-          <span className="text-xs font-mono text-blue-400 w-6 text-right">{speed}x</span>
+          <input type="range" min="0.5" max="12" step="0.1" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-24 accent-blue-500 cursor-pointer" />
+          <span className="text-xs font-mono text-blue-400 w-8 text-right">{speed.toFixed(1)}x</span>
         </div>
 
         <div className="flex items-center gap-3 bg-zinc-800 px-4 py-2 rounded-lg">
