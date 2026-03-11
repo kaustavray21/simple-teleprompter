@@ -183,6 +183,10 @@ export default function App() {
     setModalConfig({ isOpen: true, type: 'paste', message: "Paste your script text below:", inputValue: '' });
   };
 
+  const openVoiceHelpModal = () => {
+    setModalConfig({ isOpen: true, type: 'offline-voice-help', message: "🎙️ Offline Voice Setup", inputValue: '' });
+  };
+
   const handlePasteSubmit = () => {
     if (modalConfig.inputValue.trim()) {
       setText(modalConfig.inputValue);
@@ -250,6 +254,7 @@ export default function App() {
         onOpenGDoc={openGDocModal}
         onOpenPaste={openPasteModal}
         onClearMemory={handleClearMemory}
+        onOpenVoiceHelp={openVoiceHelpModal}
       />
 
       <TeleprompterViewport
