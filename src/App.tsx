@@ -1,5 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import type { ChangeEvent, MouseEvent } from 'react';
 import { Play, Pause, Maximize, RotateCcw, FlipHorizontal, Upload, Link as LinkIcon, Rewind, FastForward } from 'lucide-react';
+
+declare global {
+  interface Window {
+    pdfjsLib: any;
+    mammoth: any;
+  }
+}
 
 export default function App() {
   const [text, setText] = useState('Upload a PDF or Word document to begin.\n\nTap the screen to hide or show the top settings bar.\n\nYou can control the scrolling speed, adjust text size, mirror the text for teleprompter glass, and enter full screen mode using the controls.');
@@ -8,13 +16,13 @@ export default function App() {
   const [isMirrored, setIsMirrored] = useState(false);
   const [fontSize, setFontSize] = useState(48);
   const [showSettings, setShowSettings] = useState(true);
-  const [lines, setLines] = useState([]);
+  const [lines, setLines] = useState<string[]>([]);
 
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
-  const requestRef = useRef();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const requestRef = useRef<number | null>(null);
   const scrollYRef = useRef(0);
-  const hideTimerRef = useRef(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [modalConfig, setModalConfig] = useState({ isOpen: false, type: '', message: '', inputValue: '' });
 
@@ -53,6 +61,7 @@ export default function App() {
     if (!dimensions.width || !dimensions.height || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = dimensions.width * dpr;
@@ -62,7 +71,7 @@ export default function App() {
     ctx.font = `bold ${fontSize}px sans-serif`;
     const maxWidth = dimensions.width * 0.85;
     const paragraphs = text.split('\n');
-    const newLines = [];
+    const newLines: string[] = [];
 
     paragraphs.forEach(p => {
       if (!p.trim()) {
@@ -90,6 +99,7 @@ export default function App() {
     if (!canvasRef.current || !dimensions.width) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
 
     ctx.save();
@@ -127,7 +137,9 @@ export default function App() {
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(requestRef.current);
+    return () => {
+      if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
+    };
   }, [draw]);
 
   useEffect(() => {
@@ -149,8 +161,8 @@ export default function App() {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setIsPlaying(false);
@@ -167,7 +179,7 @@ export default function App() {
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        fullText += content.items.map(item => item.str).join(' ') + '\n\n';
+        fullText += content.items.map((item: any) => item.str).join(' ') + '\n\n';
       }
       setText(fullText);
     }
@@ -182,7 +194,7 @@ export default function App() {
     });
   };
 
-  const handleGDocSubmit = async (url) => {
+  const handleGDocSubmit = async (url: string) => {
     if (!url) {
       setModalConfig({ ...modalConfig, isOpen: false });
       return;
@@ -206,7 +218,7 @@ export default function App() {
       const fetchedText = await response.text();
 
       if (fetchedText.trim().startsWith('<')) {
-        setModalConfig({ isOpen: true, type: 'error', message: "Could not load document. Please ensure the Google Doc sharing settings are set to 'Anyone with the link can view'." });
+        setModalConfig({ isOpen: true, type: 'error', message: "Could not load document. Please ensure the Google Doc sharing settings are set to 'Anyone with the link can view'.", inputValue: '' });
         return;
       }
 
@@ -215,7 +227,7 @@ export default function App() {
       scrollYRef.current = 0;
       setModalConfig({ isOpen: false, type: '', message: '', inputValue: '' });
     } catch (error) {
-      setModalConfig({ isOpen: true, type: 'error', message: "Failed to fetch the document. It might not be public or the proxy failed." });
+      setModalConfig({ isOpen: true, type: 'error', message: "Failed to fetch the document. It might not be public or the proxy failed.", inputValue: '' });
     }
   };
 
@@ -223,12 +235,12 @@ export default function App() {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
       try {
-        await screen.orientation.lock('landscape');
+        await (screen.orientation as any).lock('landscape');
       } catch (err) { }
     } else {
       await document.exitFullscreen();
       try {
-        screen.orientation.unlock();
+        (screen.orientation as any).unlock();
       } catch (err) { }
     }
   };
@@ -236,25 +248,25 @@ export default function App() {
   const resetScroll = () => {
     scrollYRef.current = 0;
     if (!isPlaying) {
-      cancelAnimationFrame(requestRef.current);
+      if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
       requestRef.current = requestAnimationFrame(draw);
     }
   };
 
-  const skipBackward = (e) => {
+  const skipBackward = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     scrollYRef.current = Math.max(0, scrollYRef.current - (fontSize * 5));
     if (!isPlaying) {
-      cancelAnimationFrame(requestRef.current);
+      if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
       requestRef.current = requestAnimationFrame(draw);
     }
   };
 
-  const skipForward = (e) => {
+  const skipForward = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     scrollYRef.current += (fontSize * 5);
     if (!isPlaying) {
-      cancelAnimationFrame(requestRef.current);
+      if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
       requestRef.current = requestAnimationFrame(draw);
     }
   };
